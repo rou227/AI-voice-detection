@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VoxGuard Phone Sensor</title>
+<style>
+  :root{--bg:#0f1b2d;--card:#16263f;--line:#243B61;--ink:#e8eef7;--mut:#8aa0bd;--blue:#3568A8;--green:#32805A;--red:#C05252;--amber:#C58B35}
+  *{box-sizing:border-box} body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+  .wrap{width:100%;max-width:420px} h1{font-size:22px;margin:0 0 4px} p{color:var(--mut);margin:0 0 16px;font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+  input{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:#0f1b2d;color:var(--ink);font-size:16px;margin-bottom:12px}
+  button{width:100%;padding:14px;border:0;border-radius:8px;background:var(--blue);color:#fff;font-size:17px;font-weight:600}
+  .chip{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-family:monospace;background:#243B61}
+  .meter{height:8px;border-radius:4px;background:#0f1b2d;overflow:hidden;margin-top:10px}.meter>i{display:block;height:100%;width:0;background:var(--blue);transition:width .08s}
+  #verdict{font-size:26px;font-weight:700;margin:6px 0}.ai{color:var(--red)}.human{color:#4ade80}.unc{color:var(--amber)}
+  #err{color:#fca5a5;font-size:14px;margin-top:10px;display:none}
+</style></head><body><div class="wrap">
+  <h1>VoxGuard</h1><p>Phone sensor. Keep this page open and put the call on speaker next to the phone.</p>
+  <div class="card" id="setup">
+    <input id="name" maxlength="24" placeholder="Device name" aria-label="Device name">
+    <button id="go">Start protection</button>
+    <div id="err"></div>
+  </div>
+  <div class="card" id="live" style="display:none">
+    <span class="chip" id="status">Connecting…</span>
+    <div id="verdict">Listening…</div>
+    <div id="detail" style="color:var(--mut);font-size:14px">Waiting for a voice</div>
+    <div class="meter"><i id="lvl"></i></div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const ua = navigator.userAgent;
+const model = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android" : "Phone";
+try { $("name").value = localStorage.getItem("vg-name") || `${model} #${10 + Math.floor(Math.random() * 90)}`; } catch { $("name").value = model; }
+let ctx, ws, last = "";
+
+function fail(msg) { $("err").textContent = msg; $("err").style.display = "block"; }
+
+$("go").onclick = async () => {
+  if (!navigator.mediaDevices?.getUserMedia)
+    return fail("Microphone needs HTTPS. Open the https:// link from the QR code and accept the certificate warning.");
+  let stream;
+  try {   // raw mic: echo-cancel / noise-suppress would erase the call audio or distort the voice features
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  } catch { return fail("Microphone permission was denied. Allow it in the browser prompt / site settings and try again."); }
+  try { localStorage.setItem("vg-name", $("name").value); } catch {}
+  ctx = new AudioContext(); await ctx.resume();
+  const src = ctx.createMediaStreamSource(stream), proc = ctx.createScriptProcessor(4096, 1, 1), mute = ctx.createGain();
+  mute.gain.value = 0;                                   // never play the mic back
+  src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
+  proc.onaudioprocess = e => {
+    const f = e.inputBuffer.getChannelData(0), pcm = new Int16Array(f.length);
+    let sum = 0;
+    for (let i = 0; i < f.length; i++) { const s = Math.max(-1, Math.min(1, f[i])); pcm[i] = s * 32767; sum += s * s; }
+    $("lvl").style.width = Math.min(100, Math.sqrt(sum / f.length) * 400) + "%";
+    if (ws && ws.readyState === 1) ws.send(pcm.buffer);
+  };
+  $("setup").style.display = "none"; $("live").style.display = "block";
+  navigator.wakeLock?.request("screen").catch(() => {});   // keep screen on (optional)
+  connect();
+};
+
+function connect() {
+  const q = `sr=${ctx.sampleRate}&name=${encodeURIComponent($("name").value || "Phone")}`;
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/audio?${q}`);
+  ws.onopen = () => $("status").textContent = "● Streaming live";
+  ws.onclose = () => { $("status").textContent = "Reconnecting…"; setTimeout(connect, 1500); };
+  ws.onmessage = ev => {
+    const r = JSON.parse(ev.data); if (r.type !== "result") return;
+    const cls = { "AI-Cloned": "ai", Human: "human", Uncertain: "unc" }[r.label] || "";
+    $("verdict").className = cls;
+    $("verdict").textContent = r.label === "AI-Cloned" ? "⚠ AI VOICE" : r.label === "Human" ? "✓ HUMAN VOICE" : r.label === "Uncertain" ? "? UNCERTAIN" : "Listening…";
+    $("detail").textContent = r.confidence ? `${r.confidence}% confidence` : "Waiting for a voice";
+    if (r.label === "AI-Cloned" && last !== "AI-Cloned") navigator.vibrate?.([200, 100, 200]);
+    last = r.label;
+  };
+}
+</script></body></html>

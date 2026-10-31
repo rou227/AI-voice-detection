@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-slate-50" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VoxGuard - Live Voice Authenticity Dashboard</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            },
+            status: {
+              success: '#16a34a',
+              alert: '#dc2626',
+              warning: '#d97706',
+              neutral: '#64748b'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style data-purpose="base-enhancements">
+    body {
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+    /* Subtle custom scrollbar for inner panes */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .pulsing-indicator {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 7px rgba(34, 197, 94, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
+    }
+    .equalizer-bar {
+      will-change: height, background-color, box-shadow;
+      transition: height 75ms ease-out, background-color 300ms ease, box-shadow 300ms ease;
+    }
+  </style>
+</head>
+<body class="h-full text-slate-800 antialiased font-sans flex overflow-hidden bg-slate-100/80">
+<!-- BEGIN: LeftSidebar -->
+<aside class="w-64 flex flex-col justify-between shrink-0 z-30 select-none border-r text-slate-300" data-purpose="main-sidebar" style="background-color: #172B4D; border-color: #243B61;">
+<div class="flex flex-col">
+<div class="p-5 pb-4 border-b flex items-center justify-between" style="border-color: #243B61;">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded flex items-center justify-center text-white shadow-sm" style="background-color: #3568A8;">
+<span class="material-symbols-outlined text-[20px]">security</span>
+</div>
+<div>
+<div class="flex items-center space-x-1.5">
+<span class="font-bold text-white tracking-tight text-base leading-tight font-sans">VoxGuard</span>
+<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded font-mono uppercase tracking-wider text-white" style="background-color: #243B61;">v2.4</span>
+</div>
+<p class="text-[11px] font-medium text-slate-400">Enterprise Security</p>
+</div>
+</div>
+</div>
+<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Operations</div>
+<nav class="p-3 pt-1 space-y-1" data-purpose="sidebar-nav">
+<button class="w-full flex items-center justify-between px-3 py-2 rounded text-xs font-semibold text-white transition-colors shadow-xs" id="nav-btn-dashboard" onclick="switchMainView('dashboard')" style="background-color: #3568A8;">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px]">dashboard</span>
+<span class="">Dashboard</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2 rounded text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors group" id="nav-btn-live" onclick="switchMainView('live')">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-white">graphic_eq</span>
+<span class="">Live Monitor</span>
+</div>
+<span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border" style="background-color: rgba(39, 140, 135, 0.15); color: #4ecdc4; border-color: rgba(39, 140, 135, 0.4);">READY</span>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2 rounded text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors group" id="nav-btn-devices" onclick="switchMainView('devices')">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-white">smartphone</span>
+<span class="">Connected Devices</span>
+</div>
+<span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium text-slate-300" id="sidebar-device-count" style="background-color: #243B61;">1</span>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2 rounded text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors group" id="nav-btn-history" onclick="switchMainView('history')">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-white">manage_search</span>
+<span class="">Detection History</span>
+</div>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2 rounded text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors group" id="nav-btn-analytics" onclick="switchMainView('analytics')">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-white">analytics</span>
+<span class="">Analytics</span>
+</div>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2 rounded text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors group" id="nav-btn-settings" onclick="switchMainView('settings')">
+<div class="flex items-center space-x-2.5">
+<span class="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-white">tune</span>
+<span class="">Settings</span>
+</div>
+</button>
+</nav>
+</div>
+<div class="p-4 border-t space-y-3" style="border-color: #243B61; background-color: #12213A;">
+<div class="p-2.5 rounded border text-slate-300 text-xs" style="border-color: #243B61; background-color: #172B4D;">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="w-2 h-2 rounded-full" id="ws-sidebar-dot" style="background-color: #32805A;"></span>
+<span class="text-[11px] font-semibold text-white">WebSocket Status</span>
+</div>
+<span class="text-[10px] font-mono text-slate-400" id="ws-sidebar-latency">12ms</span>
+</div>
+<p class="text-[10px] text-slate-400 mt-1 font-mono">/ws/dashboard (Active)</p>
+</div>
+<div class="flex items-center justify-between text-xs text-slate-400 px-1">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[16px] text-slate-400">admin_panel_settings</span>
+<span class="text-[11px] font-medium text-slate-300">SOC Admin Mode</span>
+</div>
+<span class="text-[10px] font-mono text-emerald-400">ONLINE</span>
+</div>
+</div>
+</aside>
+<!-- END: LeftSidebar -->
+<!-- BEGIN: MainContentArea -->
+<div class="flex-1 flex flex-col h-full overflow-hidden">
+<!-- BEGIN: TopBar -->
+<header class="h-14 bg-white border-b px-6 flex items-center justify-between shrink-0 shadow-xs z-20" data-purpose="top-navigation-bar" style="border-color: #DCE3EB;">
+<div class="flex items-center space-x-3">
+<div class="flex items-center space-x-2 text-xs">
+<span class="font-semibold text-slate-500">VoxGuard Security</span>
+<span class="text-slate-300">/</span>
+<span class="font-bold text-slate-800" id="page-breadcrumb-sub" style="color: #253449;">Dashboard Overview</span>
+</div>
+</div>
+<div class="flex items-center space-x-3.5">
+<div class="flex items-center space-x-1.5 px-2.5 py-1 rounded text-xs border font-mono" style="border-color: #DCE3EB; background-color: #F4F6F8;">
+<span class="w-2 h-2 rounded-full" id="top-ws-indicator" style="background-color: #32805A;"></span>
+<span class="text-slate-600 text-[11px]">WS: <strong class="text-slate-800" id="top-ws-text">CONNECTED</strong></span>
+</div>
+<div class="flex items-center space-x-1.5 px-2.5 py-1 rounded text-xs border font-mono" style="border-color: #DCE3EB; background-color: #F4F6F8;">
+<span class="w-2 h-2 rounded-full" id="top-phone-indicator" style="background-color: #278C87;"></span>
+<span class="text-slate-600 text-[11px]">Sensor: <strong class="text-slate-800" id="top-phone-text">iPhone 15 Pro</strong></span>
+</div>
+
+<button class="inline-flex items-center space-x-1.5 text-white text-xs font-semibold px-3 py-1.5 rounded shadow-sm hover:opacity-95 transition-all" onclick="openPairModal()" style="background-color: #3568A8;">
+<span class="material-symbols-outlined text-[16px]">qr_code_2</span>
+<span class="">+ Pair Phone (/qr)</span>
+</button>
+<div class="h-5 w-px" style="background-color: #DCE3EB;"></div>
+<div class="flex items-center space-x-2.5">
+<div class="w-7 h-7 rounded flex items-center justify-center text-white text-xs font-semibold tracking-wider shadow-xs" style="background-color: #172B4D;">
+        SA
+      </div>
+<div class="text-left hidden md:block">
+<div class="text-xs font-semibold leading-tight" style="color: #253449;">SecOps Admin</div>
+<div class="text-[10px] text-slate-500 font-mono">analyst_01</div>
+</div>
+</div>
+</div>
+</header>
+<!-- END: TopBar -->
+<!-- BEGIN: DashboardBodyScrollable -->
+<main class="flex-1 overflow-y-auto p-6 space-y-5" data-purpose="dashboard-main-view" id="main-scroll-pane" style="background-color: #F4F6F8;">
+<!-- Offline / System Status Banner -->
+<div class="p-3 px-4 rounded border flex items-center justify-between bg-white text-xs shadow-2xs" id="status-telemetry-banner" style="border-color: #DCE3EB;">
+<div class="flex items-center space-x-2.5">
+<span class="w-2.5 h-2.5 rounded-full animate-pulse" style="background-color: #278C87;"></span>
+<span class="font-semibold text-slate-800" style="color: #253449;">Real-Time Voice Stream:</span>
+<span class="text-slate-600 font-mono text-[11px]" id="banner-status-desc">Awaiting Audio Feed (/ws/dashboard connected, latency 12ms)</span>
+</div>
+<div class="flex items-center space-x-3">
+<span class="text-[11px] text-slate-500 font-mono">Cluster: us-east-inference-01</span>
+<button class="px-2.5 py-1 rounded text-[11px] font-semibold border hover:bg-slate-50 transition-colors" onclick="switchMainView('live')" style="border-color: #DCE3EB; color: #3568A8;">Inspect Monitor →</button>
+</div>
+</div>
+<!-- Section 1: Dashboard Overview Tab View -->
+<div class="space-y-5" id="tab-view-dashboard">
+<!-- HERO CENTERPIECE: Live Call Monitoring & Voice Analysis Panel -->
+<div class="bg-white rounded border shadow-2xs overflow-hidden" id="live-call-centerpiece" style="border-color: rgb(220, 227, 235);">
+<!-- Top Header Bar with Live Status & Call Metadata -->
+<div class="p-4 sm:p-5 border-b flex flex-wrap items-center justify-between gap-4" style="border-color: #DCE3EB; background-color: #FAFBFC;">
+<div class="flex items-center space-x-3">
+<div class="flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-mono font-bold tracking-wide border shadow-2xs" style="background-color: #ecfdf5; color: #15803d; border-color: #a7f3d0;">
+<span class="w-2 h-2 rounded-full pulsing-indicator" style="background-color: #22c55e;"></span>
+<span class="">LIVE CALL MONITOR</span>
+</div>
+<span class="text-xs font-mono text-slate-400 hidden sm:inline">|</span>
+<div class="flex items-center space-x-2 text-xs font-mono text-slate-600">
+<span class="text-slate-400">Session:</span>
+<span class="font-semibold text-slate-800" id="live-session">no active call</span>
+</div>
+</div>
+<!-- Quick Control Actions -->
+<div class="flex items-center space-x-2">
+<button class="px-2.5 py-1 rounded text-xs font-medium border bg-white hover:bg-slate-50 text-slate-700 transition-colors flex items-center space-x-1" id="btn-mute-stream" onclick="toggleMuteStream()" style="border-color: #DCE3EB;">
+<span class="material-symbols-outlined text-[16px] text-slate-500">mic_off</span>
+<span class="" id="mute-btn-text">Mute Stream</span>
+</button>
+<button class="px-2.5 py-1 rounded text-xs font-medium border bg-white hover:bg-slate-50 text-slate-700 transition-colors flex items-center space-x-1" onclick="switchMainView('history')" style="border-color: #DCE3EB;">
+<span class="material-symbols-outlined text-[16px] text-slate-500">data_object</span>
+<span class="">Inspect Packet</span>
+</button>
+<button class="px-2.5 py-1 rounded text-xs font-semibold text-white transition-opacity hover:opacity-90 flex items-center space-x-1" onclick="resetCallSession()" style="background-color: #C05252;">
+<span class="material-symbols-outlined text-[16px]">call_end</span>
+<span class="">End Monitor</span>
+</button>
+</div>
+</div>
+<!-- Call Metadata Strip: 4 Key Telemetry Points -->
+<div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 text-xs border-b" style="border-color: #DCE3EB; divide-color: #DCE3EB;">
+<!-- Metric 1: Caller -->
+<div class="p-3.5 px-5 flex items-center space-x-3 bg-white">
+<div class="w-8 h-8 rounded flex items-center justify-center text-slate-600 shrink-0" style="background-color: #F4F6F8;">
+<span class="material-symbols-outlined text-[18px]">call</span>
+</div>
+<div>
+<div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Caller Identity</div>
+<div class="font-bold font-mono text-slate-900 text-[13px] leading-tight" id="live-caller">Live call</div>
+<div class="text-[10px] text-slate-500" id="live-caller-sub">Heard via phone mic</div>
+</div>
+</div>
+<!-- Metric 2: Sensor / Device -->
+<div class="p-3.5 px-5 flex items-center space-x-3 bg-white">
+<div class="w-8 h-8 rounded flex items-center justify-center text-slate-600 shrink-0" style="background-color: #F4F6F8;">
+<span class="material-symbols-outlined text-[18px]">phone_android</span>
+</div>
+<div>
+<div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Capture Sensor</div>
+<div class="font-bold text-slate-900 text-[13px] leading-tight" id="live-sensor-name">Waiting for phone…</div>
+<div class="text-[10px] text-slate-500 font-mono" id="live-sensor-sub">scan the QR code</div>
+</div>
+</div>
+<!-- Metric 3: Live Duration -->
+<div class="p-3.5 px-5 flex items-center space-x-3 bg-white">
+<div class="w-8 h-8 rounded flex items-center justify-center text-slate-600 shrink-0" style="background-color: #F4F6F8;">
+<span class="material-symbols-outlined text-[18px]">timer</span>
+</div>
+<div>
+<div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Call Duration</div>
+<div class="font-bold font-mono text-slate-900 text-[15px] leading-tight" id="live-call-timer">00:00</div>
+<div class="text-[10px] text-emerald-600 font-mono font-medium flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="">Clock Active</span>
+</div>
+</div>
+</div>
+<!-- Metric 4: Connection Quality -->
+<div class="p-3.5 px-5 flex items-center space-x-3 bg-white">
+<div class="w-8 h-8 rounded flex items-center justify-center text-slate-600 shrink-0" style="background-color: #F4F6F8;">
+<span class="material-symbols-outlined text-[18px]">wifi_tethering</span>
+</div>
+<div>
+<div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Connection</div>
+<div class="flex items-center space-x-1.5">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold" style="background-color: #f0fdf4; color: #32805A;" id="conn-state">• Connected</span>
+<span class="text-[11px] font-mono text-slate-500" id="conn-sr">16kHz PCM</span>
+</div>
+<div class="text-[10px] text-slate-500 font-mono">Latency: <span id="conn-latency">—</span></div>
+</div>
+</div>
+</div>
+<!-- Main Voice Analysis Body -->
+<div class="p-5 sm:p-6 space-y-5 bg-white">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div>
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[20px] text-slate-700">graphic_eq</span>
+<h3 class="text-base font-bold tracking-tight text-slate-900" style="color: #253449;">AI Voice Analysis Panel</h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider text-white" style="background-color: #3568A8;">Acoustic Heuristic v1</span>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Real-time acoustic feature extraction, spectral continuity checks &amp; synthetic voice detection</p>
+</div>
+<!-- Interactive State Simulator Switchers -->
+<div class="flex items-center flex-wrap gap-1.5 p-1 rounded border bg-slate-50 text-xs font-medium" style="border-color: #DCE3EB;">
+<span class="text-[10px] font-mono text-slate-500 px-2 uppercase">Preview:</span>
+<button class="px-2 py-1 rounded text-[11px] transition-colors border font-semibold" id="sim-btn-analyzing" onclick="setVoiceState('analyzing')" style="border-color: #DCE3EB; background-color: #FFFFFF; color: #3568A8;">Analyzing</button>
+<button class="px-2 py-1 rounded text-[11px] transition-colors font-medium text-slate-600 hover:text-slate-900" id="sim-btn-cloned" onclick="setVoiceState('cloned')">AI Cloned</button>
+<button class="px-2 py-1 rounded text-[11px] transition-colors font-medium text-slate-600 hover:text-slate-900" id="sim-btn-human" onclick="setVoiceState('human')">Human Voice</button>
+<button class="px-2 py-1 rounded text-[11px] transition-colors font-medium text-slate-600 hover:text-slate-900" id="sim-btn-uncertain" onclick="setVoiceState('uncertain')">Uncertain</button>
+</div>
+</div>
+<!-- Real-Time Waveform & FFT Spectrum Visualizer Card -->
+<div class="rounded border p-4 sm:p-5 relative overflow-hidden text-white shadow-inner" style="background-color: #12213A; border-color: #243B61;">
+<div class="flex items-center justify-between mb-3 text-xs font-mono">
+<div class="flex items-center space-x-2 text-slate-300">
+<span class="w-2 h-2 rounded-full animate-pulse" id="visualizer-status-dot" style="background-color: #278C87;"></span>
+<span class="text-[11px] font-semibold uppercase tracking-wider text-slate-200">Spectrogram Power Spectrum (20Hz - 8000Hz)</span>
+</div>
+<div class="flex items-center space-x-3 text-[11px] text-slate-400">
+<span class="">FFT Window: 512</span>
+<span class="font-mono text-slate-300 flex items-center space-x-1">
+<span class="text-slate-400">Power:</span>
+<span class="font-bold text-sky-400" id="visualizer-gain-val">-6.2 dB</span>
+</span>
+<span class="text-emerald-400 font-semibold flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-ping"></span>
+<span id="visualizer-buffer-badge">Buffer: Real-time</span>
+</span>
+</div>
+</div>
+<!-- Multi-frequency Audio Equalizer Bars Grid - Real-Time Animated via JavaScript -->
+<div class="h-24 sm:h-28 flex items-end justify-between gap-1 sm:gap-1.5 px-1 py-1 overflow-hidden" id="audio-equalizer-bars">
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 38%; background-color: #278C87;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 52%; background-color: #278C87;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 74%; background-color: #3568A8;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 60%; background-color: #3568A8;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 88%; background-color: #32805A;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 94%; background-color: #32805A;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 78%; background-color: #3568A8;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 44%; background-color: #278C87;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 65%; background-color: #3568A8;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 82%; background-color: #32805A;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 58%; background-color: #278C87;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 92%; background-color: #3568A8;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 85%; background-color: #32805A;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 70%; background-color: #3568A8;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 48%; background-color: #278C87;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 62%; background-color: #278C87;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 80%; background-color: #3568A8;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 96%; background-color: #32805A;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 68%; background-color: #3568A8;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 40%; background-color: #278C87;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 75%; background-color: #32805A;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 89%; background-color: #3568A8;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 54%; background-color: #278C87;"></div>
+<div class="flex-1 rounded-t-xs equalizer-bar" style="height: 35%; background-color: #278C87;"></div>
+</div>
+<!-- Spectrogram Baseline Frequency labels -->
+<div class="flex justify-between text-[9px] font-mono text-slate-400 pt-2 border-t mt-2" style="border-color: #243B61;">
+<span class="">Sub-Bass (60Hz)</span>
+<span class="">Fundamental Pitch (150Hz)</span>
+<span class="">Vocal Formants (1.2kHz - 3.4kHz)</span>
+<span class="">High Frequencies (8kHz)</span>
+</div>
+</div>
+<!-- Prominent Detection Result Banner (Dynamic state container) -->
+<div class="p-4 sm:p-5 rounded border transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4" id="voice-result-banner" style="background-color: #F4F8FC; border-color: #C2D5ED;">
+<div class="flex items-start space-x-3.5">
+<div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-2xs" id="result-badge-icon" style="background-color: #3568A8; color: #ffffff;">
+<span class="material-symbols-outlined text-[24px]" id="result-badge-symbol">graphic_eq</span>
+</div>
+<div>
+<div class="flex items-center space-x-2">
+<h4 class="text-base font-bold font-mono tracking-tight" id="result-verdict-title" style="color: #172B4D;">ANALYZING VOICE STREAM...</h4>
+<span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded border" id="result-confidence-pill" style="background-color: #ffffff; color: #3568A8; border-color: #C2D5ED;">Evaluating Packets</span>
+</div>
+<p class="text-xs text-slate-600 mt-0.5" id="result-verdict-desc">Continuous prosody synthesis detection running on live packet buffer. Acoustic glottal pulses are within regular tolerance.</p>
+</div>
+</div>
+<!-- Confidence Meter & Quick Stat -->
+<div class="md:w-64 shrink-0 space-y-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-slate-200/60">
+<div class="flex justify-between text-xs font-mono">
+<span class="text-slate-500 font-medium" id="meter-label">Classification Certainty:</span>
+<strong class="font-bold" id="meter-val-text" style="color: #3568A8;">Processing</strong>
+</div>
+<div class="w-full h-2 rounded bg-slate-200/70 overflow-hidden">
+<div class="h-full rounded transition-all duration-500" id="meter-bar" style="width: 60%; background-color: #3568A8;"></div>
+</div>
+<div class="flex justify-between text-[10px] font-mono text-slate-400">
+<span class="">Noise floor: -48dB</span>
+<span class="" id="metric-anomaly-index">Artifact Index: 0.04</span>
+</div>
+</div>
+</div>
+<!-- Telemetry Snapshot & Technical Disclaimer Footer -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t text-xs" style="border-color: #DCE3EB;">
+<div class="flex flex-wrap items-center gap-3 text-[11px] font-mono text-slate-500">
+<span class="flex items-center space-x-1.5">
+<span class="w-1.5 h-1.5 rounded-full" style="background-color: #32805A;"></span>
+<span class="">Engine Latency: <strong id="eng-latency">—</strong></span>
+</span>
+<span class="">•</span>
+<span class="">Sample Rate: <strong id="eng-sr">—</strong></span>
+<span class="">•</span>
+<span class="">Window: <strong>2.0 s, new verdict every 0.5 s</strong></span>
+</div>
+<span class="text-[11px] text-slate-400 italic">
+        Live data streamed from <code class="font-mono text-slate-600 bg-slate-100 px-1 py-0.5 rounded text-[10px]">/ws/dashboard</code> 
+      </span>
+</div>
+</div>
+</div>
+<!-- Connected phones -->
+<section class="bg-white rounded p-5 border shadow-2xs" id="device-panel" style="border-color: #DCE3EB;">
+<div class="flex items-center justify-between mb-3">
+<div><h3 class="text-sm font-bold tracking-tight" style="color: #253449;">Connected Phones <span class="font-mono text-slate-400" id="device-panel-count">(0)</span></h3>
+<p class="text-xs text-slate-500">Every phone that scanned the QR code. Click a phone to pin it to the main monitor.</p></div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" id="device-grid">
+<div class="text-xs text-slate-400 font-mono p-3" id="device-empty">No phones connected. Click “Pair Phone” and scan the QR code.</div>
+</div>
+</section>
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- KPI 1: Connected Devices -->
+<div class="bg-white rounded p-4 border shadow-2xs" style="border-color: #DCE3EB;">
+<div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500">
+<span class="">Connected Devices</span>
+<span class="material-symbols-outlined text-[18px] text-slate-400">phone_iphone</span>
+</div>
+<div class="mt-2 flex items-baseline justify-between">
+<h3 class="text-2xl font-bold font-mono" id="stat-devices-count" style="color: #253449;">0 Phones</h3>
+<span class="text-[11px] font-semibold px-2 py-0.5 rounded border" style="background-color: #f0fdf4; color: #32805A; border-color: #bbf7d0;">Active</span>
+</div>
+<div class="mt-1 text-xs text-slate-500 font-mono text-[11px]" id="stat-devices-sub">none connected</div>
+</div>
+<!-- KPI 2: Total Analyses -->
+<div class="bg-white rounded p-4 border shadow-2xs" style="border-color: #DCE3EB;">
+<div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500">
+<span class="">Total Analyses</span>
+<span class="material-symbols-outlined text-[18px] text-slate-400">graphic_eq</span>
+</div>
+<div class="mt-2 flex items-baseline justify-between">
+<h3 class="text-2xl font-bold font-mono" id="stat-total-packets" style="color: #253449;">0</h3>
+<span class="text-[11px] font-semibold px-2 py-0.5 rounded border" style="background-color: #f0f9ff; color: #3568A8; border-color: #bae6fd;"><span id="stat-rate">0</span>/min</span>
+</div>
+<div class="mt-1 text-xs text-slate-500 font-mono text-[11px]">Voice windows analysed</div>
+</div>
+<!-- KPI 3: AI Voice Detections -->
+<div class="bg-white rounded p-4 border shadow-2xs" style="border-color: #DCE3EB;">
+<div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500">
+<span class="">AI Voice Detections</span>
+<span class="material-symbols-outlined text-[18px]" style="color: #C05252;">crisis_alert</span>
+</div>
+<div class="mt-2 flex items-baseline justify-between">
+<h3 class="text-2xl font-bold font-mono" id="stat-clone-rate" style="color: #C05252;">0%</h3>
+<span class="text-[11px] font-semibold px-2 py-0.5 rounded border" style="background-color: #fef2f2; color: #C05252; border-color: #fecaca;">Spoof Alert</span>
+</div>
+<div class="mt-1 text-xs text-slate-500 font-mono text-[11px]"><span id="stat-ai-sub">0</span> AI-voice windows flagged</div>
+</div>
+<!-- KPI 4: Human Voice Detections -->
+<div class="bg-white rounded p-4 border shadow-2xs" style="border-color: #DCE3EB;">
+<div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500">
+<span class="">Human Authenticity</span>
+<span class="material-symbols-outlined text-[18px]" style="color: #32805A;">verified_user</span>
+</div>
+<div class="mt-2 flex items-baseline justify-between">
+<h3 class="text-2xl font-bold font-mono" id="stat-human-ratio" style="color: #32805A;">0%</h3>
+<span class="text-[11px] font-semibold px-2 py-0.5 rounded border" style="background-color: #f0fdf4; color: #32805A; border-color: #bbf7d0;">Verified</span>
+</div>
+<div class="mt-1 text-xs text-slate-500 font-mono text-[11px]"><span id="stat-human-sub">0</span> human-voice windows</div>
+</div>
+</section>
+<!-- Live AI-likelihood timeline -->
+<section class="bg-white rounded p-5 border shadow-2xs" style="border-color: #DCE3EB;">
+<div class="flex items-center justify-between mb-3">
+<div><h3 class="text-sm font-bold tracking-tight" style="color: #253449;">AI-Likelihood Timeline</h3>
+<p class="text-xs text-slate-500">Smoothed score of the selected phone, last 2 minutes. Above 60 = AI-cloned, below 40 = human.</p></div>
+<span class="text-[11px] font-mono text-slate-500" id="timeline-device">no phone</span>
+</div>
+<canvas id="timeline" height="140" class="w-full" style="width:100%;height:140px"></canvas>
+</section>
+<!-- Quick Live Preview & Injection Control Card -->
+<section class="bg-white rounded p-5 border shadow-2xs" style="border-color: #DCE3EB;">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[20px] text-slate-600">history</span>
+<h3 class="text-sm font-bold tracking-tight" style="color: #253449;">Latest Audio Packet Telemetry</h3>
+</div>
+<div class="flex space-x-2">
+
+<button class="px-3 py-1.5 rounded text-xs font-medium border hover:bg-slate-50 text-slate-700 transition-colors" onclick="switchMainView('history')" style="border-color: #DCE3EB;">
+            View Full History Log
+          </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs">
+<thead>
+<tr class="border-b text-slate-500 font-medium" style="border-color: #DCE3EB;">
+<th class="py-2 font-medium">Packet / Session ID</th>
+<th class="py-2 font-medium">Classifier Engine</th>
+<th class="py-2 font-medium">Confidence Score</th>
+<th class="py-2 font-medium">Threat Assessment</th>
+<th class="py-2 font-medium text-right">Verdict Badge</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 text-slate-700" id="inferences-tbody"></tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Section 3: Detection History & Connected Devices Views (SPA tabs) -->
+<div class="space-y-5 hidden" id="tab-view-history">
+<div class="bg-white rounded p-5 border shadow-2xs" style="border-color: #DCE3EB;">
+<div class="flex items-center justify-between mb-4">
+<div>
+<h3 class="text-base font-bold tracking-tight" style="color: #253449;">Detection History Log</h3>
+<p class="text-xs text-slate-500">Persistent audit trail of all packet classifications and biometric results</p>
+</div>
+<div class="flex space-x-2">
+<input id="history-search" class="px-3 py-1.5 text-xs border rounded w-64 bg-slate-50 font-mono" placeholder="Search device or verdict..." style="border-color: #DCE3EB;" type="text"/>
+<button class="px-3 py-1.5 rounded text-xs border bg-white hover:bg-slate-50 font-medium" id="btn-export" style="border-color: #DCE3EB;">Export CSV</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs">
+<thead>
+<tr class="border-b text-slate-500 font-medium" style="border-color: #DCE3EB;">
+<th class="py-2.5 font-medium">Timestamp (UTC)</th>
+<th class="py-2.5 font-medium">Classification Badge</th>
+<th class="py-2.5 font-medium">Confidence</th>
+<th class="py-2.5 font-medium">Threat Assessment</th>
+<th class="py-2.5 font-medium">Device • Origin</th>
+<th class="py-2.5 font-medium text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 text-slate-700" id="history-tbody"></tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+<!-- END: DashboardBodyScrollable -->
+</div>
+<!-- END: MainContentArea -->
+<!-- BEGIN: ModalPairPhone -->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs transition-opacity hidden" data-purpose="qr-pairing-modal" id="pair-modal">
+<div class="bg-white rounded max-w-sm w-full p-6 shadow-xl border relative transform transition-all scale-100" style="border-color: #DCE3EB;">
+<!-- Close Button -->
+<button class="absolute top-4 right-4 text-slate-400 hover:text-slate-600" onclick="closePairModal()">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+<div class="text-center">
+<div class="w-10 h-10 rounded flex items-center justify-center mx-auto mb-3 text-white shadow-xs" style="background-color: #3568A8;">
+<span class="material-symbols-outlined text-[22px]">qr_code_scanner</span>
+</div>
+<h3 class="text-base font-bold text-slate-900" style="color: #253449;">Pair Mobile Microphone</h3>
+<p class="text-xs text-slate-500 mt-1">Scan with the phone camera (same Wi-Fi). Allow the microphone when asked. <code class="bg-slate-100 text-slate-800 px-1 py-0.5 rounded font-mono text-[11px]">/mobile</code></p>
+</div>
+<!-- QR Code Display Frame -->
+<div class="mt-4 p-4 rounded border flex flex-col items-center justify-center" style="background-color: #F4F6F8; border-color: #DCE3EB;">
+<div class="w-52 h-52 bg-white p-2.5 rounded shadow-2xs border flex items-center justify-center" style="border-color: #DCE3EB;">
+<img id="qr-img" alt="QR code to pair a phone" class="w-full h-full" src="/qr"/>
+</div>
+<!-- State Machine Status -->
+<div class="mt-3 flex items-center space-x-1.5 text-xs font-mono text-slate-600">
+<span class="w-2 h-2 rounded-full" style="background-color: #278C87;"></span>
+<span class="">State: <strong class="text-slate-800" id="pair-state">waiting for scan</strong></span>
+</div>
+<span class="text-[11px] text-slate-400 font-mono mt-0.5 break-all text-center" id="pair-url">…</span>
+</div>
+<div class="mt-4 flex space-x-2">
+<button class="flex-1 py-1.5 px-3 border bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded transition-colors" id="btn-copy-link" onclick="copyPairUrl()" style="border-color: #DCE3EB;">
+        Copy Endpoint
+      </button>
+<button class="flex-1 py-1.5 px-3 text-white text-xs font-semibold rounded transition-colors" onclick="closePairModal()" style="background-color: #3568A8;">
+        Close
+      </button>
+</div>
+</div>
+</div>
+<!-- END: ModalPairPhone -->
+<!-- BEGIN: InteractiveScripts -->
+<script data-purpose="dashboard-spa-controller">
+    // Navigation view switching logic
+    function switchMainView(tabKey) {
+      const tabs = ['dashboard', 'live', 'history'];
+      tabs.forEach(key => {
+        const viewEl = document.getElementById(`tab-view-${key}`);
+        if (viewEl) {
+          if (key === tabKey) {
+            viewEl.classList.remove('hidden');
+          } else {
+            viewEl.classList.add('hidden');
+          }
+        }
+      });
+      const navKeys = ['dashboard', 'live', 'devices', 'history', 'analytics', 'settings'];
+      navKeys.forEach(key => {
+        const btn = document.getElementById(`nav-btn-${key}`);
+        if (!btn) return;
+        if (key === tabKey) {
+          btn.style.backgroundColor = '#3568A8';
+          btn.className = "w-full flex items-center justify-between px-3 py-2 rounded text-xs font-semibold text-white transition-colors shadow-xs";
+        } else {
+          btn.style.backgroundColor = 'transparent';
+          btn.className = "w-full flex items-center justify-between px-3 py-2 rounded text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors group";
+        }
+      });
+      const breadcrumb = document.getElementById('page-breadcrumb-sub');
+      if (breadcrumb) {
+        if (tabKey === 'live') breadcrumb.innerText = 'Live Monitor (Sensors)';
+        else if (tabKey === 'history') breadcrumb.innerText = 'Detection History Audit';
+        else breadcrumb.innerText = 'Dashboard Overview';
+      }
+    }
+
+    // Modal Handlers
+    function openPairModal() {
+      const modal = document.getElementById('pair-modal');
+      modal.classList.remove('hidden');
+    }
+
+    function closePairModal() {
+      const modal = document.getElementById('pair-modal');
+      modal.classList.add('hidden');
+    }
+
+    function copyPairUrl() {
+      const btn = document.getElementById('btn-copy-link');
+      navigator.clipboard?.writeText('https://voxguard.internal/mobile');
+      if (btn) {
+        btn.innerText = 'Copied!';
+        btn.classList.add('text-emerald-700', 'bg-emerald-50');
+        setTimeout(() => {
+          btn.innerText = 'Copy Endpoint';
+          btn.classList.remove('text-emerald-700', 'bg-emerald-50');
+        }, 2000);
+      }
+    }
+
+    // Call controls
+    let isMuted = false;
+    function toggleMuteStream() {
+      isMuted = !isMuted;
+      const btnText = document.getElementById('mute-btn-text');
+      const btn = document.getElementById('btn-mute-stream');
+      if (isMuted) {
+        btnText.innerText = 'Unmute Stream';
+        btn.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-300');
+      } else {
+        btnText.innerText = 'Mute Stream';
+        btn.classList.remove('bg-amber-50', 'text-amber-800', 'border-amber-300');
+      }
+    }
+
+    function resetCallSession() {
+      const timer = document.getElementById('live-call-timer');
+      if (timer) timer.innerText = '00:00';
+      setVoiceState('analyzing');
+    }
+
+    // Live Inferences simulation
+    let isSimulating = true;
+    let packetCounter = 344789;
+    let simulationTimer = null;
+
+    function toggleStreamSimulation(checked) {
+      isSimulating = checked;
+      if (!isSimulating && simulationTimer) {
+        clearInterval(simulationTimer);
+      } else if (isSimulating) {
+        startSimulation();
+      }
+    }
+
+    function triggerSampleInference() {
+      const tbody = document.getElementById('inferences-tbody');
+      if (!tbody) return;
+      const randomId = Math.floor(1000 + Math.random() * 9000);
+      const isCloned = Math.random() < 0.25;
+
+      const newRow = document.createElement('tr');
+      newRow.className = "hover:bg-slate-50/70 transition-colors";
+
+      if (isCloned) {
+        newRow.innerHTML = `
+          <td class="py-2.5 font-mono text-[11px] font-semibold text-slate-800">#sess-${randomId} • iPhone 15 Pro</td>
+          <td class="py-2.5 font-mono text-[11px] text-slate-600">SpectroCNN v3.2</td>
+          <td class="py-2.5 font-mono font-bold" style="color: #C05252;">${(96.0 + Math.random() * 3).toFixed(1)}% AI</td>
+          <td class="py-2.5 text-slate-600 text-[11px]">Synthetic mel-cepstrum artifacts detected</td>
+          <td class="py-2.5 text-right"><span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono" style="background-color: #fef2f2; color: #C05252;">AI DETECTED</span></td>
+        `;
+      } else {
+        newRow.innerHTML = `
+          <td class="py-2.5 font-mono text-[11px] font-semibold text-slate-800">#sess-${randomId} • iPhone 15 Pro</td>
+          <td class="py-2.5 font-mono text-[11px] text-slate-600">FastAPI Ingest</td>
+          <td class="py-2.5 font-mono font-bold" style="color: #32805A;">${(95.0 + Math.random() * 4).toFixed(1)}% Nat</td>
+          <td class="py-2.5 text-slate-600 text-[11px]">Authentic organic vocal resonance verified</td>
+          <td class="py-2.5 text-right"><span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono" style="background-color: #f0fdf4; color: #32805A;">HUMAN VOICE</span></td>
+        `;
+      }
+
+      tbody.insertBefore(newRow, tbody.firstChild);
+      if (tbody.children.length > 6) {
+        tbody.removeChild(tbody.lastChild);
+      }
+
+      packetCounter += 14;
+      const countEl = document.getElementById('stat-total-packets');
+      if (countEl) countEl.innerText = packetCounter.toLocaleString();
+    }
+
+    function startSimulation() {
+      simulationTimer = setInterval(() => {
+        if (!isSimulating) return;
+        packetCounter += 7;
+        const countEl = document.getElementById('stat-total-packets');
+        if (countEl) countEl.innerText = packetCounter.toLocaleString();
+      }, 2500);
+    }
+
+    /* -------------------------------------------------------------
+       REAL-TIME AUDIO VISUALIZER EQUALIZER ENGINE (requestAnimationFrame)
+       ------------------------------------------------------------- */
+    let currentVoiceState = 'analyzing';
+    let animFrameId = null;
+    let globalAudioPhase = 0;
+    const NUM_BARS = 24;
+
+    // Base spectral weights mimicking acoustic multi-band response (sub-bass, formants, highs)
+    const frequencyWeightProfile = [
+      0.35, 0.45, 0.65, 0.58, 0.85, 0.90, // Sub-bass & low pitch fundamentals (bars 0-5)
+      0.75, 0.60, 0.68, 0.84, 0.72, 0.92, // Mid vocal tract body (bars 6-11)
+      0.88, 0.78, 0.62, 0.70, 0.82, 0.95, // Formants 1.2kHz - 3.4kHz (bars 12-17)
+      0.65, 0.48, 0.60, 0.72, 0.50, 0.38  // High frequencies 4kHz - 8kHz (bars 18-23)
+    ];
+
+    // Current bar heights for interpolation smoothing
+    let currentHeights = new Array(NUM_BARS).fill(40);
+    let targetHeights = new Array(NUM_BARS).fill(40);
+
+    function initEqualizerEngine() {
+      const container = document.getElementById('audio-equalizer-bars');
+      if (!container) return;
+
+      // Ensure 24 elements with proper classes
+      container.innerHTML = '';
+      for (let i = 0; i < NUM_BARS; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'flex-1 rounded-t-xs equalizer-bar';
+        bar.style.height = `${currentHeights[i]}%`;
+        bar.style.backgroundColor = '#3568A8';
+        container.appendChild(bar);
+      }
+
+      function updateFrame() {
+        globalAudioPhase += 0.08;
+        const bars = container.children;
+        const gainReadout = document.getElementById('visualizer-gain-val');
+
+        // Dynamic audio energy level modulation
+        let baseEnergy = 0.55;
+        let dbValue = -6.2;
+
+        if (isMuted) {
+          baseEnergy = 0.05;
+          dbValue = -42.0;
+        } else if (currentVoiceState === 'cloned') {
+          // AI Cloned: unnatural rigid formant spikes around bars 13-17 (~2-3.4kHz) & high frequencies
+          baseEnergy = 0.78;
+          dbValue = -4.1 + Math.sin(globalAudioPhase * 3) * 1.5;
+        } else if (currentVoiceState === 'human') {
+          // Human voice: organic rhythmic prosody cadence (breathing & natural glottal variation)
+          baseEnergy = 0.62 + Math.sin(globalAudioPhase * 0.7) * 0.25;
+          dbValue = -7.4 + Math.sin(globalAudioPhase * 0.9) * 2.8;
+        } else if (currentVoiceState === 'uncertain') {
+          // Uncertain: noisy irregular spectrum with fluctuating dropouts
+          baseEnergy = 0.45 + (Math.random() * 0.3);
+          dbValue = -12.5 + Math.random() * 4.0;
+        } else {
+          // Analyzing: scanning fluttering pattern
+          baseEnergy = 0.58 + Math.sin(globalAudioPhase * 1.5) * 0.15;
+          dbValue = -6.2 + Math.cos(globalAudioPhase * 1.8) * 1.2;
+        }
+
+        if (window.liveBands && !isMuted) dbValue = window.liveLevel;
+        if (gainReadout && !isMuted) {
+          gainReadout.innerText = `${dbValue.toFixed(1)} dB`;
+        } else if (gainReadout && isMuted) {
+          gainReadout.innerText = `-48.0 dB (Muted)`;
+        }
+
+        for (let i = 0; i < NUM_BARS; i++) {
+          const profile = frequencyWeightProfile[i];
+          let noise = (Math.sin(globalAudioPhase * 2.2 + i * 0.8) + Math.cos(globalAudioPhase * 1.4 - i * 0.5)) * 0.5;
+          let calculatedHeight = 15;
+
+          if (isMuted) {
+            calculatedHeight = 6 + (Math.random() * 4);
+          } else if (currentVoiceState === 'cloned') {
+            // Distinct sharp synthetic formant spikes at 3.4kHz (indices 14-17)
+            if (i >= 13 && i <= 17) {
+              calculatedHeight = 82 + (Math.sin(globalAudioPhase * 4 + i) * 14) + (Math.random() * 6);
+            } else if (i % 2 === 0) {
+              calculatedHeight = 60 * profile + (Math.sin(globalAudioPhase * 3 + i) * 20);
+            } else {
+              calculatedHeight = 42 * profile + (Math.cos(globalAudioPhase * 2.5 + i) * 16);
+            }
+          } else if (currentVoiceState === 'human') {
+            // Smooth natural harmonic curves around vocal fundamental (indices 3-8) and formants
+            let organicSwell = Math.sin(globalAudioPhase * 0.8 + i * 0.3) * 25;
+            calculatedHeight = (profile * 75 * baseEnergy) + organicSwell + (noise * 8);
+          } else if (currentVoiceState === 'uncertain') {
+            // Erratic jagged codec artifact jitter
+            calculatedHeight = (profile * 50) + (Math.random() * 42);
+          } else {
+            // Analyzing mode: sweeping scanner wave + acoustic baseline
+            let waveScan = Math.sin(globalAudioPhase * 2.0 - i * 0.4) * 22;
+            calculatedHeight = (profile * 68) + waveScan + (noise * 10);
+          }
+
+          if (window.liveBands && !isMuted) calculatedHeight = window.liveBands[i] * 100;
+          // Clamp heights between 8% and 98%
+          calculatedHeight = Math.max(8, Math.min(98, calculatedHeight));
+          
+          // Easing / interpolation
+          currentHeights[i] = currentHeights[i] + (calculatedHeight - currentHeights[i]) * 0.28;
+          
+          if (bars[i]) {
+            bars[i].style.height = `${currentHeights[i].toFixed(1)}%`;
+
+            // State and intensity driven color styling
+            if (isMuted) {
+              bars[i].style.backgroundColor = '#243B61';
+              bars[i].style.boxShadow = 'none';
+            } else if (currentVoiceState === 'cloned') {
+              // Deep red / coral synthetic alert styling with glowing formant peaks
+              if (currentHeights[i] > 75) {
+                bars[i].style.backgroundColor = '#E05353';
+                bars[i].style.boxShadow = '0 0 10px rgba(224, 83, 83, 0.45)';
+              } else {
+                bars[i].style.backgroundColor = '#C05252';
+                bars[i].style.boxShadow = 'none';
+              }
+            } else if (currentVoiceState === 'human') {
+              // Organic verified green / teal hues
+              if (currentHeights[i] > 72) {
+                bars[i].style.backgroundColor = '#22C55E';
+                bars[i].style.boxShadow = '0 0 8px rgba(34, 197, 94, 0.35)';
+              } else if (i < 8) {
+                bars[i].style.backgroundColor = '#278C87';
+                bars[i].style.boxShadow = 'none';
+              } else {
+                bars[i].style.backgroundColor = '#32805A';
+                bars[i].style.boxShadow = 'none';
+              }
+            } else if (currentVoiceState === 'uncertain') {
+              // Amber / ochre jitter
+              bars[i].style.backgroundColor = (i % 2 === 0) ? '#C58B35' : '#D99B43';
+              bars[i].style.boxShadow = 'none';
+            } else {
+              // Analyzing mode: enterprise blue & teal spectrum
+              if (i < 4 || i > 18) {
+                bars[i].style.backgroundColor = '#278C87';
+              } else if (currentHeights[i] > 80) {
+                bars[i].style.backgroundColor = '#38BDF8';
+                bars[i].style.boxShadow = '0 0 8px rgba(56, 189, 248, 0.3)';
+              } else {
+                bars[i].style.backgroundColor = '#3568A8';
+                bars[i].style.boxShadow = 'none';
+              }
+            }
+          }
+        }
+
+        animFrameId = requestAnimationFrame(updateFrame);
+      }
+
+      updateFrame();
+    }
+
+    // Voice State Simulator Handler
+    function setVoiceState(state) {
+      currentVoiceState = state;
+      const stateKeys = ['analyzing', 'cloned', 'human', 'uncertain'];
+      stateKeys.forEach(k => {
+        const btn = document.getElementById(`sim-btn-${k}`);
+        if (!btn) return;
+        if (k === state) {
+          btn.className = "px-2 py-1 rounded text-[11px] transition-colors border font-semibold";
+          btn.style.borderColor = '#DCE3EB';
+          btn.style.backgroundColor = '#FFFFFF';
+          btn.style.color = '#3568A8';
+        } else {
+          btn.className = "px-2 py-1 rounded text-[11px] transition-colors font-medium text-slate-600 hover:text-slate-900";
+          btn.style.borderColor = 'transparent';
+          btn.style.backgroundColor = 'transparent';
+          btn.style.color = '';
+        }
+      });
+
+      const banner = document.getElementById('voice-result-banner');
+      const badgeIcon = document.getElementById('result-badge-icon');
+      const badgeSymbol = document.getElementById('result-badge-symbol');
+      const verdictTitle = document.getElementById('result-verdict-title');
+      const verdictPill = document.getElementById('result-confidence-pill');
+      const verdictDesc = document.getElementById('result-verdict-desc');
+      const meterBar = document.getElementById('meter-bar');
+      const meterValText = document.getElementById('meter-val-text');
+      const anomalyIndex = document.getElementById('metric-anomaly-index');
+      const statusDot = document.getElementById('visualizer-status-dot');
+
+      if (state === 'cloned') {
+        banner.style.backgroundColor = '#FEF2F2';
+        banner.style.borderColor = '#FECACA';
+        badgeIcon.style.backgroundColor = '#C05252';
+        badgeSymbol.innerText = 'crisis_alert';
+        verdictTitle.innerText = 'CRITICAL: SYNTHETIC AI VOICE DETECTED';
+        verdictTitle.style.color = '#991B1B';
+        verdictPill.innerText = '98.8% AI Spoof';
+        verdictPill.style.backgroundColor = '#FFFFFF';
+        verdictPill.style.color = '#C05252';
+        verdictPill.style.borderColor = '#FECACA';
+        verdictDesc.innerText = 'Phase continuity breaks at 3.4kHz & non-biological formant transitions. High probability of generative neural diffusion/TTS model.';
+        meterBar.style.width = '98.8%';
+        meterBar.style.backgroundColor = '#C05252';
+        meterValText.innerText = '98.8% Cloned';
+        meterValText.style.color = '#C05252';
+        if (anomalyIndex) anomalyIndex.innerText = 'Artifact Index: 0.94 (CRITICAL)';
+        if (statusDot) statusDot.style.backgroundColor = '#C05252';
+      } else if (state === 'human') {
+        banner.style.backgroundColor = '#F0FDF4';
+        banner.style.borderColor = '#BBF7D0';
+        badgeIcon.style.backgroundColor = '#32805A';
+        badgeSymbol.innerText = 'verified_user';
+        verdictTitle.innerText = 'AUTHENTIC HUMAN VOICEPRINT VERIFIED';
+        verdictTitle.style.color = '#166534';
+        verdictPill.innerText = '97.4% Human';
+        verdictPill.style.backgroundColor = '#FFFFFF';
+        verdictPill.style.color = '#32805A';
+        verdictPill.style.borderColor = '#BBF7D0';
+        verdictDesc.innerText = 'Glottal pulses, physiological jitter, and dynamic vocal formant harmonics confirm organic human vocal tract speech.';
+        meterBar.style.width = '97.4%';
+        meterBar.style.backgroundColor = '#32805A';
+        meterValText.innerText = '97.4% Organic';
+        meterValText.style.color = '#32805A';
+        if (anomalyIndex) anomalyIndex.innerText = 'Artifact Index: 0.02 (CLEAN)';
+        if (statusDot) statusDot.style.backgroundColor = '#32805A';
+      } else if (state === 'uncertain') {
+        banner.style.backgroundColor = '#FFFBEB';
+        banner.style.borderColor = '#FDE68A';
+        badgeIcon.style.backgroundColor = '#C58B35';
+        badgeSymbol.innerText = 'help_center';
+        verdictTitle.innerText = 'BANDWIDTH DEGRADED / UNCERTAIN';
+        verdictTitle.style.color = '#92400E';
+        verdictPill.innerText = '61.0% Low Confidence';
+        verdictPill.style.backgroundColor = '#FFFFFF';
+        verdictPill.style.color = '#C58B35';
+        verdictPill.style.borderColor = '#FDE68A';
+        verdictDesc.innerText = 'Heavy PSTN codec downsampling and background noise floor obscuring sub-band harmonics. Request higher resolution stream.';
+        meterBar.style.width = '61.0%';
+        meterBar.style.backgroundColor = '#C58B35';
+        meterValText.innerText = '61.0% Marginal';
+        meterValText.style.color = '#C58B35';
+        if (anomalyIndex) anomalyIndex.innerText = 'Artifact Index: 0.42 (NOISY)';
+        if (statusDot) statusDot.style.backgroundColor = '#C58B35';
+      } else {
+        banner.style.backgroundColor = '#F4F8FC';
+        banner.style.borderColor = '#C2D5ED';
+        badgeIcon.style.backgroundColor = '#3568A8';
+        badgeSymbol.innerText = 'graphic_eq';
+        verdictTitle.innerText = 'ANALYZING VOICE STREAM...';
+        verdictTitle.style.color = '#172B4D';
+        verdictPill.innerText = 'Evaluating Packets';
+        verdictPill.style.backgroundColor = '#FFFFFF';
+        verdictPill.style.color = '#3568A8';
+        verdictPill.style.borderColor = '#C2D5ED';
+        verdictDesc.innerText = 'Continuous prosody synthesis detection running on live packet buffer. Acoustic glottal pulses are within regular tolerance.';
+        meterBar.style.width = '60%';
+        meterBar.style.backgroundColor = '#3568A8';
+        meterValText.innerText = 'Processing';
+        meterValText.style.color = '#3568A8';
+        if (anomalyIndex) anomalyIndex.innerText = 'Artifact Index: 0.04';
+        if (statusDot) statusDot.style.backgroundColor = '#278C87';
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      initEqualizerEngine();
+      startSimulation();
+    });
+  </script>
+<!-- END: InteractiveScripts -->
+<script src="/static/app.js"></script>
+</body></html>
